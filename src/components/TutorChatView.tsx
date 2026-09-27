@@ -86,6 +86,21 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [teacherAvatar, setTeacherAvatar] = useState<string | null>(() => {
+    return localStorage.getItem('teacher_avatar_url') || null;
+  });
+
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      setTeacherAvatar(localStorage.getItem('teacher_avatar_url') || null);
+    };
+    window.addEventListener('storage', handleAvatarUpdate);
+    window.addEventListener('avatar-updated', handleAvatarUpdate);
+    return () => {
+      window.removeEventListener('storage', handleAvatarUpdate);
+      window.removeEventListener('avatar-updated', handleAvatarUpdate);
+    };
+  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -755,8 +770,16 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
       <div className="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-amber-200/70 flex items-center justify-between bg-gradient-to-r from-amber-50/90 via-white to-red-50/50 backdrop-blur-xs">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-700 via-red-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-red-900/20">
-              <Bot className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-700 via-red-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-red-900/20 overflow-hidden border border-amber-300/40">
+              {teacherAvatar ? (
+                <img
+                  src={teacherAvatar}
+                  alt="Thầy Dũng"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Bot className="w-5 h-5" />
+              )}
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full shadow-xs" />
           </div>
@@ -865,13 +888,23 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
             >
               {/* Avatar */}
               <div
-                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-xs shrink-0 shadow-sm ${
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-xs shrink-0 shadow-sm overflow-hidden border border-amber-300/30 ${
                   isUser
                     ? 'bg-gradient-to-tr from-stone-800 to-stone-700 text-white'
                     : 'bg-gradient-to-tr from-red-700 via-red-600 to-amber-500 text-white shadow-red-900/15'
                 }`}
               >
-                {isUser ? <User className="w-4 h-4 sm:w-4.5 sm:h-4.5" /> : <Bot className="w-4 h-4 sm:w-4.5 sm:h-4.5" />}
+                {isUser ? (
+                  <User className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                ) : teacherAvatar ? (
+                  <img
+                    src={teacherAvatar}
+                    alt="Thầy Dũng"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Bot className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                )}
               </div>
 
               {/* Chat Bubble Container */}
