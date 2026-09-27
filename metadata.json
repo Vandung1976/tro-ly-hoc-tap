@@ -1,0 +1,7 @@
+{
+  "name": "Trợ Lý Ôn Tập Lịch Sử THPT",
+  "description": "Trợ lý AI thông minh ôn tập Lịch sử THPT: giải đề từ ảnh chụp, trắc nghiệm 4 lựa chọn, trắc nghiệm đúng sai, tự luận chấm điểm chi tiết và gợi ý trọng tâm ôn tập.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
