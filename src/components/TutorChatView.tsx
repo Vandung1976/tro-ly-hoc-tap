@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, ChatImageAttachment } from '../types/history';
-import { getApiHeaders } from '../utils/apiClient';
 import {
   Send,
   Sparkles,
@@ -324,7 +323,7 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: getApiHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMsgContent,
           question: userMsgContent,
@@ -604,7 +603,7 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
     }
 
     return (
-      <div className="space-y-1.5 font-sans text-[13px] sm:text-[14px] leading-relaxed">
+      <div className="space-y-2 font-sans text-[13.5px] sm:text-[14.5px] leading-relaxed break-words tracking-normal text-stone-850">
         {elements}
       </div>
     );
@@ -907,18 +906,18 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
 
                 {/* Bubble Text */}
                 <div
-                  className={`rounded-2xl p-4 sm:p-5 text-stone-800 leading-relaxed ${
+                  className={`rounded-2xl p-4 sm:p-5 leading-relaxed font-sans break-words tracking-normal ${
                     isUser
                       ? 'bg-gradient-to-br from-red-600 via-red-700 to-amber-700 text-white rounded-tr-xs font-normal shadow-md shadow-red-700/20'
-                      : 'bg-white border border-amber-200/80 rounded-tl-xs shadow-xs'
+                      : 'bg-white border border-amber-200/80 rounded-tl-xs shadow-xs text-stone-800'
                   }`}
                 >
                   {isUser ? (
-                    <div className="whitespace-pre-line text-sm sm:text-[14px] leading-relaxed text-white font-medium">
+                    <div className="whitespace-pre-line text-sm sm:text-[14.5px] leading-relaxed text-white font-normal break-words tracking-normal">
                       {m.content}
                     </div>
                   ) : (
-                    <div>{renderFormattedContent(m.content)}</div>
+                    <div className="break-words font-sans">{renderFormattedContent(m.content)}</div>
                   )}
                 </div>
 

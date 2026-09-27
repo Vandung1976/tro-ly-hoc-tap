@@ -1,16 +1,28 @@
-import { getGeminiApiKey, generateGeminiContent } from './_utils.js';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const CANDIDATE_MODELS = [
+  'gemini-3.5-flash',
+  'gemini-3.6-flash',
+  'gemini-3.7-flash',
+  'gemini-3.8-flash',
+  'gemini-3.5-flash-lite',
+];
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-gemini-key, x-api-key');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { question, studentAnswer, suggestedAnswer, keyPoints, topic } = req.body || {};
 
-  const apiKey = getGeminiApiKey(req);
+  const apiKey =
+    process.env.GEMINI_API_KEY ||
+    process.env.VITE_GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY;
 
   if (!apiKey) {
     return res.status(200).json({
@@ -21,7 +33,6 @@ export default async function handler(req, res) {
         missingOrIncorrect: ['Cần phân tích sâu sắc hơn về ý nghĩa thời đại và bài học kinh nghiệm.'],
         recommendedReview: topic || 'Kiến thức Lịch sử trọng tâm',
       },
-      isOfflineFallback: true,
     });
   }
 
@@ -41,15 +52,20 @@ Trả về đúng định dạng JSON:
   "recommendedReview": "<chuyên đề kiến thức cần củng cố>"
 }`;
 
-  try {
-    const text = await generateGeminiContent({ apiKey, prompt });
-    if (text) {
-      const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(clean);
-      return res.status(200).json({ success: true, result: parsed, isOfflineFallback: false });
+  const genAI = new GoogleGenerativeAI(apiKey);
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      const text = (await result.response).text();
+      if (text) {
+        const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(clean);
+        return res.status(200).json({ success: true, result: parsed });
+      }
+    } catch (e) {
+      console.warn(`[Grade Essay] ${modelName} fail:`, e?.message);
     }
-  } catch (e) {
-    console.warn(`[Grade Essay] Gemini API fail:`, e?.message);
   }
 
   return res.status(200).json({
@@ -60,6 +76,5 @@ Trả về đúng định dạng JSON:
       missingOrIncorrect: ['Cần liên hệ thực tiễn và bài học kinh nghiệm sâu sắc hơn.'],
       recommendedReview: topic || 'Lịch sử 12',
     },
-    isOfflineFallback: true,
   });
 }

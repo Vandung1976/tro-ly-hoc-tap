@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { EssayQuestion, EssayGradingResult, Difficulty } from '../types/history';
 import { SAMPLE_ESSAYS } from '../data/sampleQuestions';
-import { getApiHeaders } from '../utils/apiClient';
 import {
   Sparkles,
   BookOpen,
@@ -133,7 +132,7 @@ export const EssayView: React.FC<EssayViewProps> = ({ onSaveEssayAttempt }) => {
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: getApiHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'grade-essay',
           question: currentQ.question,
@@ -181,7 +180,7 @@ export const EssayView: React.FC<EssayViewProps> = ({ onSaveEssayAttempt }) => {
     try {
       const res = await fetch('/api/generate-questions', {
         method: 'POST',
-        headers: getApiHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic: topicToUse,
           keyword: keywordToUse,

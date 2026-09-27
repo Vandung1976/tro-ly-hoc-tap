@@ -1,4 +1,13 @@
-import { getGeminiApiKey, generateGeminiContent } from './_utils.js';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Các model Gemini tốc độ cao và ổn định hiện hành
+const CANDIDATE_MODELS = [
+  'gemini-3.5-flash',
+  'gemini-3.6-flash',
+  'gemini-3.7-flash',
+  'gemini-3.8-flash',
+  'gemini-3.5-flash-lite',
+];
 
 // Ngân hàng câu hỏi dự phòng chất lượng cao chuẩn chương trình Lịch sử 12 GDPT
 const FALLBACK_BANK_MULTIPLE_CHOICE = [
@@ -211,7 +220,7 @@ function getFilteredFallback(questionType, count = 5) {
 }
 
 export default async function handler(req, res) {
-  // CORS Headers
+  // CORS & UTF-8 Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -219,6 +228,7 @@ export default async function handler(req, res) {
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -236,7 +246,10 @@ export default async function handler(req, res) {
   } = body;
 
   const requestedCount = Math.min(Math.max(Number(count) || 1, 1), 10);
-  const apiKey = getGeminiApiKey(req);
+  const apiKey =
+    process.env.GEMINI_API_KEY ||
+    process.env.VITE_GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY;
 
   // Nếu không có API Key, trả về ngân hàng câu hỏi chuẩn ngay lập tức (không báo lỗi!)
   if (!apiKey) {
@@ -244,7 +257,6 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       questions: fallbackList,
-      isOfflineFallback: true,
       note: 'Dùng bộ câu hỏi chuẩn biên soạn sẵn (chưa cấu hình GEMINI_API_KEY).',
     });
   }
@@ -311,23 +323,30 @@ Trả về duy nhất định dạng JSON:
   }
 
   // Gọi Gemini
-  try {
-    const text = await generateGeminiContent({ apiKey, prompt });
-    if (text) {
-      const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
-      if (parsed.questions && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
-        const finalQuestions = parsed.questions.map((q, idx) => ({
-          ...q,
-          id: q.id || `gen-${Date.now()}-${idx}`,
-          type: questionType,
-          topic: q.topic || topic,
-        }));
-        return res.status(200).json({ success: true, questions: finalQuestions, isOfflineFallback: false });
+  const genAI = new GoogleGenerativeAI(apiKey);
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      if (text) {
+        const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanJson);
+        if (parsed.questions && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+          const finalQuestions = parsed.questions.map((q, idx) => ({
+            ...q,
+            id: q.id || `gen-${Date.now()}-${idx}`,
+            type: questionType,
+            topic: q.topic || topic,
+          }));
+          return res.status(200).json({ success: true, questions: finalQuestions });
+        }
       }
+    } catch (err) {
+      console.warn(`[Generate Questions] Model ${modelName} issue:`, err?.message || err);
     }
-  } catch (err) {
-    console.warn(`[Generate Questions] Gemini API issue:`, err?.message || err);
   }
 
   // Nếu tất cả model Gemini đều bận/lỗi, tự động hoàn trả ngân hàng câu hỏi chất lượng cao
@@ -335,7 +354,6 @@ Trả về duy nhất định dạng JSON:
   return res.status(200).json({
     success: true,
     questions: fallbackList,
-    isOfflineFallback: true,
     note: 'Đã tải bộ câu hỏi chất lượng cao từ ngân hàng khảo thí Lịch sử.',
   });
 }
