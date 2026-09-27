@@ -125,7 +125,7 @@ async function callGeminiWithFallback(apiKey, promptOrParts) {
 }
 
 export default async function handler(req, res) {
-  // Cấu hình CORS & Charset UTF-8 chuẩn tiếng Việt
+  // Cấu hình CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -133,7 +133,6 @@ export default async function handler(req, res) {
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
