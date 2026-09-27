@@ -321,11 +321,13 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
     setIsSending(true);
 
     try {
-      const res = await fetch('/api/ask-tutor', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          message: userMsgContent,
           question: userMsgContent,
+          prompt: userMsgContent,
           history: messages.slice(-6).map((m) => ({
             role: m.sender,
             content: m.content,
@@ -341,11 +343,12 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
       });
 
       const data = await res.json();
-      if (data.success && data.answer) {
+      const answerText = data.answer || data.reply || data.text || data.message;
+      if (answerText) {
         const botMsg: ChatMessage = {
           id: `b-${Date.now()}`,
           sender: 'assistant',
-          content: data.answer,
+          content: answerText,
           timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         };
         setMessages((prev) => [...prev, botMsg]);

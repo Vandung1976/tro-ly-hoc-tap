@@ -43,10 +43,11 @@ export const SmartAdviceView: React.FC<SmartAdviceViewProps> = ({
         })),
       }));
 
-      const res = await fetch('/api/smart-advice', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'smart-advice',
           resultsSummary: summaryPayload.length > 0 ? summaryPayload : [
             {
               topic: 'Cuộc kháng chiến chống Mỹ, cứu nước (1954 - 1975)',
