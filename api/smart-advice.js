@@ -1,27 +1,16 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const CANDIDATE_MODELS = [
-  'gemini-3.5-flash',
-  'gemini-3.6-flash',
-  'gemini-3.7-flash',
-  'gemini-3.8-flash',
-  'gemini-3.5-flash-lite',
-];
+import { getGeminiApiKey, generateGeminiContent } from './_utils.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-gemini-key, x-api-key');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { resultsSummary } = req.body || {};
 
-  const apiKey =
-    process.env.GEMINI_API_KEY ||
-    process.env.VITE_GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY;
+  const apiKey = getGeminiApiKey(req);
 
   if (!apiKey) {
     return res.status(200).json({
@@ -39,6 +28,7 @@ export default async function handler(req, res) {
         ],
         encouragement: 'Bạn đang có nền tảng rất vững chắc. Chỉ cần kiên trì rèn luyện phương pháp loại trừ phương án nhiễu, điểm 9-10 chắc chắn nằm trong tầm tay!',
       },
+      isOfflineFallback: true,
     });
   }
 
@@ -54,30 +44,26 @@ Hãy đưa ra lời khuyên ôn tập chiến lược. Trả về đúng định
   "encouragement": "lời động viên"
 }`;
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  for (const modelName of CANDIDATE_MODELS) {
-    try {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(prompt);
-      const text = (await result.response).text();
-      if (text) {
-        const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(clean);
-        return res.status(200).json({ success: true, advice: parsed });
-      }
-    } catch (e) {
-      console.warn(`[Smart Advice] ${modelName} fail:`, e?.message);
+  try {
+    const text = await generateGeminiContent({ apiKey, prompt });
+    if (text) {
+      const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      return res.status(200).json({ success: true, advice: parsed, isOfflineFallback: false });
     }
+  } catch (e) {
+    console.warn(`[Smart Advice] Gemini API fail:`, e?.message);
   }
 
   return res.status(200).json({
     success: true,
     advice: {
-      strengths: ['Khả năng ghi nhớ dữ liệu lịch sử tốt'],
-      weaknesses: ['Cần lưu ý các bẫy câu hỏi dạng đoạn tư liệu'],
-      studyPlan: ['Ôn tập theo chuyên đề', 'Làm đề thi thử bấm giờ'],
-      recommendedTopics: ['Lịch sử Việt Nam 1954 - 1975'],
-      encouragement: 'Cố gắng lên nhé, bạn đang tiến bộ qua từng bài luyện tập!',
+      strengths: ['Chăm chỉ luyện tập các dạng câu hỏi cơ bản'],
+      weaknesses: ['Cần củng cố thêm các sự kiện giai đoạn 1945 - 1954'],
+      studyPlan: ['Học theo từ khóa sự kiện', 'Luyện thêm bài tập tự luận'],
+      recommendedTopics: ['Lịch sử Việt Nam 1945 - 1975'],
+      encouragement: 'Tiếp tục cố gắng mỗi ngày nhé!',
     },
+    isOfflineFallback: true,
   });
 }

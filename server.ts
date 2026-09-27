@@ -26,11 +26,9 @@ const ai = new GoogleGenAI({
 });
 
 const ACTIVE_MODELS = [
-  'gemini-3.6-flash',
-  'gemini-3.7-flash',
-  'gemini-3.5-flash',
   'gemini-3.8-flash',
-  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-latest',
 ];
 
 async function generateContentWithRetry(contents: any, config?: any) {
@@ -53,9 +51,32 @@ async function generateContentWithRetry(contents: any, config?: any) {
   throw lastError || new Error('Không thể kết nối các mô hình AI.');
 }
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
+// Health check & Vercel Environment diagnostic check
+app.get(['/api/health', '/api/env-check'], (req, res) => {
+  const sources = {
+    GEMINI_API_KEY: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY'),
+    VITE_GEMINI_API_KEY: Boolean(process.env.VITE_GEMINI_API_KEY),
+    GOOGLE_API_KEY: Boolean(process.env.GOOGLE_API_KEY),
+    GOOGLE_GENAI_API_KEY: Boolean(process.env.GOOGLE_GENAI_API_KEY),
+    API_KEY: Boolean(process.env.API_KEY),
+    NEXT_PUBLIC_GEMINI_API_KEY: Boolean(process.env.NEXT_PUBLIC_GEMINI_API_KEY),
+    CLIENT_HEADER: Boolean(req.headers['x-gemini-key'] || req.headers['x-api-key']),
+  };
+  const isConfigured = Object.values(sources).some(Boolean);
+  const rawKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+  const maskedKey = rawKey.length > 8 ? `${rawKey.slice(0, 6)}...${rawKey.slice(-4)}` : null;
+
+  res.json({
+    status: isConfigured ? 'success' : 'warning',
+    geminiApiKeyDetected: isConfigured,
+    maskedKey,
+    sourcesCheck: sources,
+    isVercel: Boolean(process.env.VERCEL),
+    time: new Date().toISOString(),
+    message: isConfigured
+      ? 'Đã nhận diện thành công GEMINI_API_KEY!'
+      : 'Vercel chưa có biến môi trường GEMINI_API_KEY. Vui lòng thêm biến trong Vercel Settings -> Environment Variables và Redeploy.',
+  });
 });
 
 // POST /api/generate-questions

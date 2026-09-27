@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, ChatImageAttachment } from '../types/history';
+import { getApiHeaders } from '../utils/apiClient';
 import {
   Send,
   Sparkles,
@@ -323,7 +324,7 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getApiHeaders(),
         body: JSON.stringify({
           message: userMsgContent,
           question: userMsgContent,

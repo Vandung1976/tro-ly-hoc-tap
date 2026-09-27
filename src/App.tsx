@@ -21,6 +21,7 @@ import {
   SAMPLE_TOPICS,
 } from './data/sampleQuestions';
 import { BookOpen, Sparkles, Award, ArrowLeft, RefreshCw } from 'lucide-react';
+import { getApiHeaders } from './utils/apiClient';
 
 const STORAGE_KEY = 'su_viet_history_records_v1';
 
@@ -118,7 +119,7 @@ export default function App() {
     try {
       const res = await fetch('/api/generate-questions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getApiHeaders(),
         body: JSON.stringify({
           topic,
           questionType,

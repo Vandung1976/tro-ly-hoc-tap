@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TestAttempt, SmartAdviceResult } from '../types/history';
+import { getApiHeaders } from '../utils/apiClient';
 import {
   Award,
   AlertTriangle,
@@ -45,7 +46,7 @@ export const SmartAdviceView: React.FC<SmartAdviceViewProps> = ({
 
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getApiHeaders(),
         body: JSON.stringify({
           action: 'smart-advice',
           resultsSummary: summaryPayload.length > 0 ? summaryPayload : [

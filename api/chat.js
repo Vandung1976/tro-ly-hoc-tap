@@ -1,14 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-// Danh sách các model Gemini hiện hành (Ưu tiên các model tốc độ cao và ổn định nhất)
-const CANDIDATE_MODELS = [
-  'gemini-3.5-flash',
-  'gemini-3.6-flash',
-  'gemini-3.7-flash',
-  'gemini-3.8-flash',
-  'gemini-3.5-flash-lite',
-  'gemini-2.5-flash',
-];
+import { getGeminiApiKey, generateGeminiContent } from './_utils.js';
 
 const SYSTEM_INSTRUCTION = `Bạn là Trợ lý AI Gia sư Lịch sử THPT Việt Nam xuất sắc (Chương trình Lịch sử 12 GDPT mới, Sách Kết nối tri thức với cuộc sống).
 Nhiệm vụ của bạn:
@@ -20,6 +10,35 @@ Nhiệm vụ của bạn:
 // Bộ phản hồi thông minh dự phòng cứu hộ khi mạng hoặc API gặp sự cố
 function getIntelligentLocalResponse(query = '') {
   const q = (query || '').toLowerCase().trim();
+
+  // Kiểm tra nếu người dùng hỏi về cấu hình Vercel hoặc API Key
+  if (
+    q.includes('vercel') ||
+    q.includes('api key') ||
+    q.includes('apikey') ||
+    q.includes('chưa nhận diện') ||
+    q.includes('cấu hình')
+  ) {
+    return `### ⚙️ Hướng dẫn khắc phục lỗi "Vercel chưa nhận diện GEMINI_API_KEY"
+
+Để kích hoạt tính năng AI trực tuyến đầy đủ trên Vercel, bạn chỉ cần thực hiện 4 bước đơn giản sau:
+
+1. **Lấy API Key:** Truy cập [Google AI Studio](https://aistudio.google.com/) để lấy Gemini API Key miễn phí (mã bắt đầu bằng \`AIzaSy...\`).
+2. **Cấu hình trên Vercel:**
+   * Mở trang quản trị dự án trên [Vercel Dashboard](https://vercel.com/dashboard).
+   * Vào **Settings** ➔ Chọn mục **Environment Variables** ở cột bên trái.
+   * Tại ô **Key**, nhập: \`GEMINI_API_KEY\`
+   * Tại ô **Value**, dán mã API Key của bạn vào.
+   * **Rất quan trọng:** Tích chọn đầy đủ cả 3 ô môi trường: **Production**, **Preview**, và **Development**.
+   * Bấm **Save**.
+3. **BẮT BUỘC REDEPLOY (Cực kỳ quan trọng!):**
+   * Vercel **không** tự động nạp biến mới vào bản đang chạy. Bạn cần vào tab **Deployments**.
+   * Bấm vào nút **\`...\` (3 chấm)** ở bản deploy mới nhất ➔ Chọn **Redeploy** (không chọn Use Cache).
+4. **Kiểm tra trạng thái:**
+   * Sau khi Redeploy xong, bạn có thể kiểm tra trực tiếp qua đường dẫn: \`https://<ten-mien-vercel-cua-ban>.vercel.app/api/env-check\`
+
+💡 *Trong thời gian này, hệ thống vẫn hoạt động bình thường với Ngân hàng tri thức Sử 12 tích hợp sẵn!*`;
+  }
 
   // 1. Chào hỏi
   if (
@@ -98,32 +117,6 @@ Bạn đang tìm hiểu về nội dung: **"${query}"**.
 💡 *Bạn có muốn tôi ra 1 câu trắc nghiệm 4 lựa chọn hoặc 1 câu Đúng/Sai về chủ đề này để bạn thử sức không?*`;
 }
 
-async function callGeminiWithFallback(apiKey, promptOrParts) {
-  const genAI = new GoogleGenerativeAI(apiKey);
-  let lastError = null;
-
-  for (const modelName of CANDIDATE_MODELS) {
-    try {
-      // Gọi model trực tiếp không phụ thuộc config cấu hình phức tạp
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-      });
-
-      const result = await model.generateContent(promptOrParts);
-      const response = await result.response;
-      const text = response.text();
-      if (text && text.trim().length > 0) {
-        return text;
-      }
-    } catch (err) {
-      lastError = err;
-      console.warn(`[Gemini API] Thử model ${modelName} không thành công:`, err?.message || err);
-    }
-  }
-
-  throw lastError || new Error('Không thể tạo phản hồi từ tất cả các model Gemini.');
-}
-
 export default async function handler(req, res) {
   // Cấu hình CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -131,7 +124,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, x-gemini-key, x-api-key, Authorization'
   );
 
   if (req.method === 'OPTIONS') {
@@ -145,11 +138,8 @@ export default async function handler(req, res) {
     });
   }
 
-  // Đọc API Key từ biến môi trường của Vercel
-  const apiKey =
-    process.env.GEMINI_API_KEY ||
-    process.env.VITE_GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY;
+  // Trích xuất API Key linh hoạt từ headers, body và env
+  const apiKey = getGeminiApiKey(req);
 
   const body = req.body || {};
   const {
@@ -168,14 +158,17 @@ export default async function handler(req, res) {
 
   const userQuery = message || question || prompt || '';
 
-  // Xử lý khi chưa có API key trên Vercel: Dùng cứu hộ thông minh kèm lời nhắc
+  // Khi chưa có API key: Dùng kho kiến thức Sử 12 tích hợp sẵn (không chèn thông báo lỗi kỹ thuật vào câu trả lời)
   if (!apiKey) {
     const fallbackAnswer = getIntelligentLocalResponse(userQuery);
     return res.status(200).json({
       success: true,
-      answer: `${fallbackAnswer}\n\n---\n*(Ghi chú: Vercel chưa nhận diện GEMINI_API_KEY, hệ thống đang dùng kho dữ liệu Sử 12 tích hợp sẵn. Hãy thêm biến GEMINI_API_KEY trong Vercel Settings để kích hoạt AI trực tuyến đầy đủ nhé).*`,
+      answer: fallbackAnswer,
       reply: fallbackAnswer,
       text: fallbackAnswer,
+      message: fallbackAnswer,
+      isOfflineFallback: true,
+      note: 'Hệ thống đang chạy với kho dữ liệu Sử 12 tích hợp sẵn. Hãy thêm biến GEMINI_API_KEY trong Vercel Settings để kích hoạt AI trực tuyến.',
     });
   }
 
@@ -199,10 +192,14 @@ Yêu cầu trả về đúng định dạng JSON:
   "recommendedReview": "<chủ đề kiến thức cần ôn tập lại>"
 }`;
       try {
-        const textResponse = await callGeminiWithFallback(apiKey, gradingPrompt);
+        const textResponse = await generateGeminiContent({
+          apiKey,
+          prompt: gradingPrompt,
+          systemInstruction: SYSTEM_INSTRUCTION,
+        });
         const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleanJson);
-        return res.status(200).json({ success: true, result: parsed });
+        return res.status(200).json({ success: true, result: parsed, isOfflineFallback: false });
       } catch (e) {
         return res.status(200).json({
           success: true,
@@ -212,6 +209,7 @@ Yêu cầu trả về đúng định dạng JSON:
             missingOrIncorrect: ['Cần liên hệ thực tiễn và bài học kinh nghiệm sâu sắc hơn.'],
             recommendedReview: topic || 'Kiến thức Lịch sử trọng tâm',
           },
+          isOfflineFallback: true,
         });
       }
     }
@@ -231,10 +229,14 @@ Hãy đưa ra lời khuyên ôn tập chiến lược chi tiết giúp học sin
   "encouragement": "<lời động viên truyền cảm hứng>"
 }`;
       try {
-        const textResponse = await callGeminiWithFallback(apiKey, advicePrompt);
+        const textResponse = await generateGeminiContent({
+          apiKey,
+          prompt: advicePrompt,
+          systemInstruction: SYSTEM_INSTRUCTION,
+        });
         const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleanJson);
-        return res.status(200).json({ success: true, advice: parsed });
+        return res.status(200).json({ success: true, advice: parsed, isOfflineFallback: false });
       } catch (e) {
         return res.status(200).json({
           success: true,
@@ -245,6 +247,7 @@ Hãy đưa ra lời khuyên ôn tập chiến lược chi tiết giúp học sin
             recommendedTopics: ['Lịch sử Việt Nam 1954 - 1975', 'Trật tự thế giới hai cực I-an-ta'],
             encouragement: 'Bạn đang tiến bộ rất nhanh, hãy kiên trì ôn luyện mỗi ngày nhé!',
           },
+          isOfflineFallback: true,
         });
       }
     }
@@ -254,9 +257,13 @@ Hãy đưa ra lời khuyên ôn tập chiến lược chi tiết giúp học sin
 
     // Thêm ảnh nếu có
     if (image && image.data) {
+      let cleanData = image.data;
+      if (typeof cleanData === 'string' && cleanData.includes(',')) {
+        cleanData = cleanData.split(',')[1];
+      }
       parts.push({
         inlineData: {
-          data: image.data,
+          data: cleanData,
           mimeType: image.mimeType || 'image/jpeg',
         },
       });
@@ -273,9 +280,13 @@ Hãy đưa ra lời khuyên ôn tập chiến lược chi tiết giúp học sin
 
     const fullPrompt = `${SYSTEM_INSTRUCTION}\n\n${conversationContext ? `[Ngữ cảnh hội thoại trước đó:]\n${conversationContext}\n\n` : ''}[Câu hỏi / Yêu cầu của học sinh:]\n${userQuery || 'Hãy giới thiệu các chuyên đề ôn thi Lịch sử 12 trọng tâm.'}`;
 
-    parts.push(fullPrompt);
+    parts.push({ text: fullPrompt });
 
-    const generatedText = await callGeminiWithFallback(apiKey, parts);
+    const generatedText = await generateGeminiContent({
+      apiKey,
+      parts,
+      systemInstruction: SYSTEM_INSTRUCTION,
+    });
 
     return res.status(200).json({
       success: true,
@@ -283,6 +294,7 @@ Hãy đưa ra lời khuyên ôn tập chiến lược chi tiết giúp học sin
       reply: generatedText,
       text: generatedText,
       message: generatedText,
+      isOfflineFallback: false,
     });
   } catch (error) {
     console.error('[API /api/chat Fallback Activated]:', error?.message);
@@ -296,6 +308,7 @@ Hãy đưa ra lời khuyên ôn tập chiến lược chi tiết giúp học sin
       reply: fallbackAnswer,
       text: fallbackAnswer,
       message: fallbackAnswer,
+      isOfflineFallback: true,
     });
   }
 }
