@@ -135,21 +135,23 @@ export default function App() {
           setTfQuestions(data.questions);
         }
       } else {
-        alert(data.error || 'Trợ lý AI gặp gián đoạn khi tạo đề. Sử dụng đề mẫu chuẩn có sẵn.');
-        // Fallback to sample
+        console.warn('API returned fallback or incomplete questions');
+        const filtered = SAMPLE_MULTIPLE_CHOICE.filter((q) => q.topic === topic);
         if (questionType === 'multiple_choice') {
-          setMcQuestions(SAMPLE_MULTIPLE_CHOICE);
+          setMcQuestions(filtered.length > 0 ? filtered : SAMPLE_MULTIPLE_CHOICE);
         } else {
-          setTfQuestions(SAMPLE_TRUE_FALSE);
+          const filteredTf = SAMPLE_TRUE_FALSE.filter((q) => q.topic === topic);
+          setTfQuestions(filteredTf.length > 0 ? filteredTf : SAMPLE_TRUE_FALSE);
         }
       }
     } catch (err) {
-      console.error(err);
-      alert('Không thể kết nối đến máy chủ AI. Dùng bộ câu hỏi mẫu.');
+      console.warn('Network issue generating questions, loading local exam questions bank:', err);
+      const filtered = SAMPLE_MULTIPLE_CHOICE.filter((q) => q.topic === topic);
       if (questionType === 'multiple_choice') {
-        setMcQuestions(SAMPLE_MULTIPLE_CHOICE);
+        setMcQuestions(filtered.length > 0 ? filtered : SAMPLE_MULTIPLE_CHOICE);
       } else {
-        setTfQuestions(SAMPLE_TRUE_FALSE);
+        const filteredTf = SAMPLE_TRUE_FALSE.filter((q) => q.topic === topic);
+        setTfQuestions(filteredTf.length > 0 ? filteredTf : SAMPLE_TRUE_FALSE);
       }
     } finally {
       setIsLoadingQuiz(false);
