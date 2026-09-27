@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { AI_ASSISTANT_AVATAR } from '../constants/avatar';
 import { ChatMessage, ChatImageAttachment } from '../types/history';
 import {
   Send,
@@ -756,16 +755,10 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
       <div className="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-amber-200/70 flex items-center justify-between bg-gradient-to-r from-amber-50/90 via-white to-red-50/50 backdrop-blur-xs">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-500 to-red-600 p-0.5 shadow-md shadow-red-900/20">
-              <div className="w-full h-full rounded-[14px] overflow-hidden bg-stone-900 flex items-center justify-center">
-                <img
-                  src={AI_ASSISTANT_AVATAR}
-                  alt="Trợ lý AI của Thầy Dũng"
-                  className="w-full h-full object-cover hover:scale-105 transition-transform"
-                />
-              </div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-700 via-red-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-red-900/20">
+              <Bot className="w-5 h-5" />
             </div>
-            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-xs" title="Trợ lý AI đang hoạt động" />
+            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full shadow-xs" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -872,23 +865,13 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
             >
               {/* Avatar */}
               <div
-                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-xs shrink-0 shadow-sm overflow-hidden ${
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-xs shrink-0 shadow-sm ${
                   isUser
                     ? 'bg-gradient-to-tr from-stone-800 to-stone-700 text-white'
-                    : 'bg-gradient-to-tr from-amber-400 to-red-600 p-0.5 shadow-red-900/15'
+                    : 'bg-gradient-to-tr from-red-700 via-red-600 to-amber-500 text-white shadow-red-900/15'
                 }`}
               >
-                {isUser ? (
-                  <User className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-                ) : (
-                  <div className="w-full h-full rounded-[10px] overflow-hidden bg-stone-900 flex items-center justify-center">
-                    <img
-                      src={AI_ASSISTANT_AVATAR}
-                      alt="Trợ lý AI"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
+                {isUser ? <User className="w-4 h-4 sm:w-4.5 sm:h-4.5" /> : <Bot className="w-4 h-4 sm:w-4.5 sm:h-4.5" />}
               </div>
 
               {/* Chat Bubble Container */}
