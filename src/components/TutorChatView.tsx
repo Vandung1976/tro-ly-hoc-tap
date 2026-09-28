@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { DEFAULT_AVATAR } from '../constants/avatar';
 import { ChatMessage, ChatImageAttachment } from '../types/history';
 import {
   Send,
@@ -87,13 +86,13 @@ Hôm nay bạn muốn củng cố chủ đề nào hay cần giải câu hỏi n
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [teacherAvatar, setTeacherAvatar] = useState<string>(() => {
-    return localStorage.getItem('teacher_avatar_url') || DEFAULT_AVATAR;
+  const [teacherAvatar, setTeacherAvatar] = useState<string | null>(() => {
+    return localStorage.getItem('teacher_avatar_url') || null;
   });
 
   useEffect(() => {
     const handleAvatarUpdate = () => {
-      setTeacherAvatar(localStorage.getItem('teacher_avatar_url') || DEFAULT_AVATAR);
+      setTeacherAvatar(localStorage.getItem('teacher_avatar_url') || null);
     };
     window.addEventListener('storage', handleAvatarUpdate);
     window.addEventListener('avatar-updated', handleAvatarUpdate);

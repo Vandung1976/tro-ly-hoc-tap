@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Link, Trash2, X, Check, Image as ImageIcon, BookOpen, Sparkles } from 'lucide-react';
-import { DEFAULT_AVATAR } from '../constants/avatar';
+import React, { useState, useRef } from 'react';
+import { Camera, Upload, Link, Trash2, X, Check, Image as ImageIcon, BookOpen } from 'lucide-react';
 
 interface AvatarManagerModalProps {
   isOpen: boolean;
@@ -15,18 +14,11 @@ export const AvatarManagerModal: React.FC<AvatarManagerModalProps> = ({
   currentAvatar,
   onSaveAvatar,
 }) => {
-  const [preview, setPreview] = useState<string>(currentAvatar || DEFAULT_AVATAR);
+  const [preview, setPreview] = useState<string | null>(currentAvatar);
   const [urlInput, setUrlInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setPreview(currentAvatar || DEFAULT_AVATAR);
-      setErrorMsg('');
-      setUrlInput('');
-    }
-  }, [isOpen, currentAvatar]);
 
   if (!isOpen) return null;
 
@@ -69,7 +61,7 @@ export const AvatarManagerModal: React.FC<AvatarManagerModalProps> = ({
   };
 
   const handleResetToDefault = () => {
-    setPreview(DEFAULT_AVATAR);
+    setPreview(null);
     onSaveAvatar(null);
     onClose();
   };
@@ -112,7 +104,7 @@ export const AvatarManagerModal: React.FC<AvatarManagerModalProps> = ({
                     className="w-full h-full object-cover"
                     onError={() => {
                       setErrorMsg('Không thể tải ảnh từ đường dẫn này. Vui lòng kiểm tra lại URL.');
-                      setPreview(DEFAULT_AVATAR);
+                      setPreview(null);
                     }}
                   />
                 ) : (

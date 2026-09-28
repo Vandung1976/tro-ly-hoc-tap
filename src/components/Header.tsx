@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, CheckCircle2, MessageSquareText, Sparkles, History, Award, Camera } from 'lucide-react';
 import { AvatarManagerModal } from './AvatarManagerModal';
-import { DEFAULT_AVATAR } from '../constants/avatar';
 
 export type ActiveTab = 'quiz' | 'essay' | 'advice' | 'tutor' | 'history';
 
@@ -18,14 +17,14 @@ export const Header: React.FC<HeaderProps> = ({
   completedTestsCount,
   averageScore,
 }) => {
-  const [avatarUrl, setAvatarUrl] = useState<string>(() => {
-    return localStorage.getItem('teacher_avatar_url') || DEFAULT_AVATAR;
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    return localStorage.getItem('teacher_avatar_url') || null;
   });
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
   useEffect(() => {
     const handleStorageChange = () => {
-      setAvatarUrl(localStorage.getItem('teacher_avatar_url') || DEFAULT_AVATAR);
+      setAvatarUrl(localStorage.getItem('teacher_avatar_url') || null);
     };
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('avatar-updated', handleStorageChange);
@@ -36,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const handleSaveAvatar = (newAvatar: string | null) => {
-    if (newAvatar && newAvatar !== DEFAULT_AVATAR) {
+    if (newAvatar) {
       try {
         localStorage.setItem('teacher_avatar_url', newAvatar);
         setAvatarUrl(newAvatar);
@@ -45,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
       }
     } else {
       localStorage.removeItem('teacher_avatar_url');
-      setAvatarUrl(DEFAULT_AVATAR);
+      setAvatarUrl(null);
     }
     window.dispatchEvent(new Event('avatar-updated'));
   };
@@ -72,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
                     src={avatarUrl}
                     alt="Avatar Thầy Dũng"
                     className="w-full h-full object-cover"
-                    onError={() => setAvatarUrl(DEFAULT_AVATAR)}
+                    onError={() => setAvatarUrl(null)}
                   />
                 ) : (
                   <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
