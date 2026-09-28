@@ -1,5 +1,6 @@
-import React from 'react';
-import { BookOpen, CheckCircle2, MessageSquareText, Sparkles, History, Award } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BookOpen, CheckCircle2, MessageSquareText, Sparkles, History, Award, Camera } from 'lucide-react';
+import { AvatarManagerModal } from './AvatarManagerModal';
 
 export type ActiveTab = 'quiz' | 'essay' | 'advice' | 'tutor' | 'history';
 
@@ -16,6 +17,38 @@ export const Header: React.FC<HeaderProps> = ({
   completedTestsCount,
   averageScore,
 }) => {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    return localStorage.getItem('teacher_avatar_url') || null;
+  });
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setAvatarUrl(localStorage.getItem('teacher_avatar_url') || null);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('avatar-updated', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('avatar-updated', handleStorageChange);
+    };
+  }, []);
+
+  const handleSaveAvatar = (newAvatar: string | null) => {
+    if (newAvatar) {
+      try {
+        localStorage.setItem('teacher_avatar_url', newAvatar);
+        setAvatarUrl(newAvatar);
+      } catch (e) {
+        console.error('LocalStorage error saving avatar:', e);
+      }
+    } else {
+      localStorage.removeItem('teacher_avatar_url');
+      setAvatarUrl(null);
+    }
+    window.dispatchEvent(new Event('avatar-updated'));
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-amber-200/80 shadow-xs">
       {/* Top Heritage Accent Bar */}
@@ -24,16 +57,50 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo & Title */}
-          <div
-            className="flex items-center gap-3 cursor-pointer group"
-            onClick={() => setActiveTab('tutor')}
-          >
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-red-700 via-red-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-red-900/20 group-hover:scale-105 transition-all">
-              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div className="flex items-center gap-3">
+            {/* Interactive Avatar Container */}
+            <div className="relative group/avatar">
+              <button
+                type="button"
+                onClick={() => setIsAvatarModalOpen(true)}
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-red-700 via-red-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-red-900/20 group-hover/avatar:scale-105 transition-all overflow-hidden border border-amber-300/40 relative cursor-pointer"
+                title="Bấm để tải lên / thay đổi ảnh đại diện (Avatar)"
+              >
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar Thầy Dũng"
+                    className="w-full h-full object-cover"
+                    onError={() => setAvatarUrl(null)}
+                  />
+                ) : (
+                  <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
+                )}
+
+                {/* Hover overlay hint */}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                  <Camera className="w-4 h-4 text-white drop-shadow" />
+                </div>
+              </button>
+
+              {/* Little Camera Badge */}
+              <button
+                type="button"
+                onClick={() => setIsAvatarModalOpen(true)}
+                className="absolute -bottom-1 -right-1 w-4 h-4 sm:w-4.5 sm:h-4.5 bg-gradient-to-tr from-amber-500 to-red-500 text-white rounded-full flex items-center justify-center shadow-xs border-2 border-white hover:scale-110 transition-transform cursor-pointer"
+                title="Đổi ảnh đại diện"
+              >
+                <Camera className="w-2.5 h-2.5" />
+              </button>
             </div>
-            <div>
+
+            {/* Site Title */}
+            <div
+              className="cursor-pointer group"
+              onClick={() => setActiveTab('tutor')}
+            >
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-lg sm:text-xl text-stone-900 tracking-tight font-serif">
+                <span className="font-extrabold text-lg sm:text-xl text-stone-900 tracking-tight font-serif group-hover:text-red-700 transition-colors">
                   Sử Việt THPT
                 </span>
                 <span className="text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-red-500 text-white shadow-xs">
@@ -127,6 +194,14 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </nav>
       </div>
+
+      {/* Avatar Management Modal */}
+      <AvatarManagerModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        currentAvatar={avatarUrl}
+        onSaveAvatar={handleSaveAvatar}
+      />
     </header>
   );
 };
